@@ -1,0 +1,13 @@
+{
+	"authors": [
+		"Anton"
+	],
+	"copyright": "Copyright © 2021, Anton",
+	"dependencies": {
+	},
+	"targetPath": "bin",
+	"workingDirectory": "bin",
+	"description": "2D graphics project",
+	"license": "MIT",
+	"name": "uni_graphics"
+}
