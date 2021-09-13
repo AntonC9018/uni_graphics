@@ -3,11 +3,17 @@
 		"Anton"
 	],
 	"copyright": "Copyright © 2021, Anton",
-	"dependencies": {
-	},
 	"targetPath": "bin",
 	"workingDirectory": "bin",
 	"description": "2D graphics project",
 	"license": "MIT",
-	"name": "uni_graphics"
+	"name": "uni_graphics",
+	"targetType": "executable",
+	"configurations": [
+		{
+			"name": "lab1",
+			"sourcePaths": ["source/arsd", "source/lab1", "source/common"],
+			"targetName": "lab1"
+		}
+	]
 }

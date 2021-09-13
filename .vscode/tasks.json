@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile_program",
+            "type": "dub",
+            "run": false,
+            "problemMatcher": [
+                "$dmd"
+            ],
+            "group": "build",
+            "args": [
+                "--build=debug",
+                "--config=${config:configurationName}"
+            ]
+        },
+        {
+            "label": "compile_tests",
+            "type": "dub",
+            "run": false,
+            "problemMatcher": [
+                "$dmd"
+            ],
+            "group": "build",
+            "args": ["--build=unittest", "--config=${config:configurationName}", "--force"]
+        }
+    ]
+}

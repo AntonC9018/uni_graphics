@@ -720,7 +720,7 @@ interface->SetProgressValue(hwnd, 40, 100);
 
 
 +/
-module simpledisplay;
+module arsd.simpledisplay;
 
 // FIXME: tetris demo
 // FIXME: space invaders demo
