@@ -40,6 +40,25 @@ v2[] samplePoints(float delegate(float) func, float startX, float endX, float nu
 	return result;
 }
 
+auto epsilon = 0.0001f;
+
+float arctanh(float x)
+{
+	x = x % 1.0;
+	float x2 = x * x;
+	float dx = x;
+	float below = 1;
+	float y = x;
+	while (dx > epsilon)
+	{
+		x *= x2;
+		below += 2;
+		dx = x / below;
+		y += dx;
+	}
+	return y;
+}
+
 
 void main(string[] args)
 {
@@ -47,11 +66,12 @@ void main(string[] args)
 
 	int width = 400, height = 400;
 	v2 dimensions = v2(width, height);
-	float startX = -5, endX = 5;
-	auto samples = samplePoints((a) => sin(a), startX, endX, 200); 
+	float startX = -1, endX = 1;
+	import std.functional : toDelegate;
+	auto samples = samplePoints(toDelegate(&arctanh), startX, endX, 200); 
 
 	void draw()
-	{
+	{	
 		auto painter = window.draw();
 		painter.clear();
 		painter.outlineColor = Color.black;
