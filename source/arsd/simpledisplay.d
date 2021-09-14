@@ -8057,7 +8057,7 @@ struct ScreenPainter {
 		return _originY;
 	}
 	arsd.color.Rectangle currentClipRectangle; // set BEFORE doing any transformations
-	private void transform(ref Point p) {
+	void transform(ref Point p) {
 		if(impl is null) return;
 		p.x += _originX;
 		p.y += _originY;
