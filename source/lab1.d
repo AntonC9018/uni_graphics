@@ -88,26 +88,22 @@ float arctanh(float x, float epsilon)
 
 void writePointsComparisonCsv(string path, const v2[] samples, const v2[] referenceSamples, float epsilon)
 {
-	import std.format;
-
 	auto f = File(path, "w");
 	f.writeln("x,y,reference_y,delta,epsilon");
 	foreach (i, sample; samples)
 	{
-		f.writeln("%f,%f,%f,%f,%f".format(sample.x, sample.y, referenceSamples[i].y, abs(sample.y - referenceSamples[i].y), epsilon));
+		f.writefln("%f,%f,%f,%f,%f", sample.x, sample.y, referenceSamples[i].y, abs(sample.y - referenceSamples[i].y), epsilon);
 	}
 	f.close();
 }
 
 void writePointCsv(string path, const v2[] samples)
 {
-	import std.format;
-
 	auto f = File(path, "w");
 	f.writeln("x,y");
 	foreach (sample; samples)
 	{
-		f.writeln("%f,%f".format(sample.x, sample.y));
+		f.writefln("%f,%f", sample.x, sample.y);
 	}
 	f.close();
 }
@@ -152,14 +148,12 @@ void main(string[] args)
 		
 		painter.drawLine(Point(0, height / 2), Point(width, height / 2));
 		painter.drawLine(Point(width / 2, 0), Point(width / 2, height));
-
 		Pen pen;
 		pen.width = 1;
 		pen.color = Color.blue;
 		pen.style = Pen.Style.Solid; 
 		painter.pen = pen;
 
-		import std.algorithm.comparison : max, min;
 		auto maximumY = samples.fold!((a, el) => max(a, el.y))(-float.max);
 		auto minimumY = samples.fold!((a, el) => min(a, el.y))(float.max);
 		auto leeway = 0.1;
