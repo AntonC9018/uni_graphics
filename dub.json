@@ -12,7 +12,8 @@
 	"configurations": [
 		{
 			"name": "lab1",
-			"sourcePaths": ["source/arsd", "source/lab1", "source/common"],
+			"sourcePaths": ["source/arsd", "source/common"],
+			"sourceFiles": ["source/lab1.d"],
 			"targetName": "lab1"
 		}
 	]
