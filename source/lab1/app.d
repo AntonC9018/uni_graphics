@@ -51,6 +51,8 @@ v2[] samplePoints(float delegate(float) func, v2 rangeX, float numSamples)
 		result ~= v2(x, func(x)); 
 	}
 
+	// result ~= v2(rangeX[1], func(rangeX[0]));
+
 	return result;
 }
 
@@ -58,6 +60,9 @@ auto epsilon = 0.0001f;
 
 float arctanh(float x)
 {
+	// It blows up to infinity at the endpoints.
+	// I think it's not symmetric? 
+	// I could do `x %= 1.0f` instead if it was though.
 	if (x < -1 || x > 1) 
 		return 0;
 
@@ -81,11 +86,11 @@ float arctanh(float x)
 
 void main(string[] args)
 {
-	auto window = new SimpleWindow(400, 400);
-
-	int width = 400, height = 400;
-	v2 dimensions = v2(width, height);
-	v2 rangeX = v2(-1, 1);
+	auto window = new SimpleWindow();
+	auto width() { return window.width; }
+	auto height() { return window.height; }
+	v2 dimensions() { return v2(width, height); }
+	v2 rangeX = v2(-0.99, 0.99);
 	import std.functional : toDelegate;
 	auto samples = samplePoints(toDelegate(&arctanh), rangeX, 200); 
 
@@ -109,50 +114,53 @@ void main(string[] args)
 		painter.pen = pen;
 
 		import std.algorithm.comparison : max, min;
-		auto maximumY = samples.fold!((a, el) => max(a, el.y))(0.0f);
+		auto maximumY = samples.fold!((a, el) => max(a, el.y))(-float.max);
 		auto minimumY = samples.fold!((a, el) => min(a, el.y))(float.max);
-		auto leeway = 0.2;
+		auto leeway = 0.1;
 
-		auto rangeY = v2(minimumY * (1 + leeway), maximumY * (1 + leeway));
-		auto start = v2(rangeX[0], rangeY[0]);
-		auto end = v2(rangeX[1], rangeY[1]);
+		auto rangeY = v2(minimumY, maximumY);
+		auto origin = v2(maximumY + minimumY, rangeX[1] + rangeX[0]) / 2;
+		auto start = (v2(rangeX[0], rangeY[0]) - origin) * (1 + leeway) + origin;
+		auto end = (v2(rangeX[1], rangeY[1]) - origin.y) * (1 + leeway) + origin.y;
 
 		int numberOfpips = 10;
 		int pipHeight = 10;
-		v2 offsetScreen = v2(screenCenter.x / numberOfpips, screenCenter.y / numberOfpips);
-		v2 origin = (start + end) / 2;
+		int numberOfPipsPlus1 = numberOfpips + 1;
+		v2 offsetScreen = v2(screenCenter.x / numberOfPipsPlus1, screenCenter.y / numberOfPipsPlus1);
 		v2 halfSpace = end - origin;
-		v2 individualOffset = halfSpace / numberOfpips;
+		v2 individualOffset = halfSpace / numberOfPipsPlus1;
 
-		foreach (i; -numberOfpips..numberOfpips)
+		foreach (i; -numberOfpips..numberOfpips + 1)
 		{
 			if (i == 0) continue;
 			v2 p = origin + individualOffset * i;
 			Point screenPoint = (offsetScreen * i).point;
 			import std.conv, std.format;
 			{
+				// x pips
 				Point screenStart = Point(screenPoint.x, -pipHeight / 2) + screenCenter;
 				Point screenEnd = Point(screenPoint.x, pipHeight / 2) + screenCenter;
 				painter.drawLine(screenStart, screenEnd);
-				auto str = "%1.1f".format(p.x);
+				auto str = "%2.2f".format(p.x);
 				painter.drawText(screenEnd - Point(painter.textSize(str).width / 2, 0), str);
 			}
 			{
+				// y pips
 				Point screenStart = Point(-pipHeight / 2, -screenPoint.y) + screenCenter;
 				Point screenEnd = Point(pipHeight / 2, -screenPoint.y) + screenCenter;
 				painter.drawLine(screenStart, screenEnd);
-				auto str = "%1.1f".format(p.y);
+				auto str = "%2.2f".format(p.y);
 				painter.drawText(screenEnd - Point(0, painter.textSize(str).height / 2), str);
 			}
 		}
 
 		{
 			auto getPoint(v2 s) { return screenCenter + (s / halfSpace * dimensions / 2).point; }
-			auto p0 = getPoint(samples[0]);
+			auto p0 = getPoint(samples[0] * v2(1, -1));
 
 			foreach (s1; samples[1..$])
 			{
-				auto p1 = getPoint(s1);
+				auto p1 = getPoint(s1 * v2(1, -1));
 				painter.drawLine(p0, p1);
 				p0 = p1;
 			}
