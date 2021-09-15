@@ -8,7 +8,16 @@ import std.math;
 
 struct v2
 {
-	float x, y;
+	float[2] arrayof;
+
+	float x() const { return arrayof[0]; }
+	float y() const { return arrayof[1]; }
+
+	this(float x, float y)
+	{
+		arrayof[0] = x; 
+		arrayof[1] = y;
+	}
 
 	Point point()
 	{
@@ -24,16 +33,21 @@ struct v2
 	{
 		mixin(`return v2(x`, op, `rhs,y`, op, `rhs);`);
 	}
+
+	ref auto opIndex(size_t index)
+	{
+		return arrayof[index];
+	}
 }
 
-v2[] samplePoints(float delegate(float) func, float startX, float endX, float numSamples)
+v2[] samplePoints(float delegate(float) func, v2 rangeX, float numSamples)
 {
 	v2[] result;
-	float step = (endX - startX) / numSamples;
+	float step = (rangeX[1] - rangeX[0]) / numSamples;
 
 	foreach (i; 0..numSamples)
 	{
-		float x = i * step + startX;
+		float x = i * step + rangeX[0];
 		result ~= v2(x, func(x)); 
 	}
 
@@ -44,17 +58,22 @@ auto epsilon = 0.0001f;
 
 float arctanh(float x)
 {
-	x = x % 1.0;
-	float x2 = x * x;
+	if (x < -1 || x > 1) 
+		return 0;
+
+	float x_squared = x * x;
+	float denominator = 1;
 	float dx = x;
-	float below = 1;
-	float y = x;
-	while (dx > epsilon)
+	float y = 0;
+
+	while (abs(dx) > epsilon)
 	{
-		x *= x2;
-		below += 2;
-		dx = x / below;
 		y += dx;
+
+		// x^(2k - 1) / (2k - 1)
+		x *= x_squared;
+		denominator += 2;
+		dx = x / denominator;
 	}
 	return y;
 }
@@ -66,9 +85,9 @@ void main(string[] args)
 
 	int width = 400, height = 400;
 	v2 dimensions = v2(width, height);
-	float startX = -1, endX = 1;
+	v2 rangeX = v2(-1, 1);
 	import std.functional : toDelegate;
-	auto samples = samplePoints(toDelegate(&arctanh), startX, endX, 200); 
+	auto samples = samplePoints(toDelegate(&arctanh), rangeX, 200); 
 
 	void draw()
 	{	
@@ -94,15 +113,15 @@ void main(string[] args)
 		auto minimumY = samples.fold!((a, el) => min(a, el.y))(float.max);
 		auto leeway = 0.2;
 
-		auto startY = minimumY * (1 + leeway);
-		auto endY = maximumY * (1 + leeway);
+		auto rangeY = v2(minimumY * (1 + leeway), maximumY * (1 + leeway));
+		auto start = v2(rangeX[0], rangeY[0]);
+		auto end = v2(rangeX[1], rangeY[1]);
 
 		int numberOfpips = 10;
 		int pipHeight = 10;
 		v2 offsetScreen = v2(screenCenter.x / numberOfpips, screenCenter.y / numberOfpips);
-		v2 origin = v2(endX + startX, startY + endY) / 2;
-		v2 functionSpaceDims = v2(endX - startX, startY - endY);
-		v2 halfSpace = v2(endX, endY) - origin;
+		v2 origin = (start + end) / 2;
+		v2 halfSpace = end - origin;
 		v2 individualOffset = halfSpace / numberOfpips;
 
 		foreach (i; -numberOfpips..numberOfpips)
@@ -112,18 +131,18 @@ void main(string[] args)
 			Point screenPoint = (offsetScreen * i).point;
 			import std.conv, std.format;
 			{
-				Point start = Point(screenPoint.x, -pipHeight / 2) + screenCenter;
-				Point end = Point(screenPoint.x, pipHeight / 2) + screenCenter;
-				painter.drawLine(start, end);
-				auto str = "%4.1f".format(p.x);
-				painter.drawText(end - Point(painter.textSize(str).width / 2, 0), str);
+				Point screenStart = Point(screenPoint.x, -pipHeight / 2) + screenCenter;
+				Point screenEnd = Point(screenPoint.x, pipHeight / 2) + screenCenter;
+				painter.drawLine(screenStart, screenEnd);
+				auto str = "%1.1f".format(p.x);
+				painter.drawText(screenEnd - Point(painter.textSize(str).width / 2, 0), str);
 			}
 			{
-				Point start = Point(-pipHeight / 2, -screenPoint.y) + screenCenter;
-				Point end = Point(pipHeight / 2, -screenPoint.y) + screenCenter;
-				painter.drawLine(start, end);
-				auto str = "%4.1f".format(p.y);
-				painter.drawText(end - Point(0, painter.textSize(str).height / 2), str);
+				Point screenStart = Point(-pipHeight / 2, -screenPoint.y) + screenCenter;
+				Point screenEnd = Point(pipHeight / 2, -screenPoint.y) + screenCenter;
+				painter.drawLine(screenStart, screenEnd);
+				auto str = "%1.1f".format(p.y);
+				painter.drawText(screenEnd - Point(0, painter.textSize(str).height / 2), str);
 			}
 		}
 
