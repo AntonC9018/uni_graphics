@@ -19,7 +19,7 @@ struct v2
 		arrayof[1] = y;
 	}
 
-	Point point()
+	Point point() const
 	{
 		return Point(cast(int) x, cast(int) y);
 	}
@@ -90,9 +90,27 @@ void main(string[] args)
 	auto width() { return window.width; }
 	auto height() { return window.height; }
 	v2 dimensions() { return v2(width, height); }
+	Point screenCenter() { return Point(width / 2, height / 2); }
+
 	v2 rangeX = v2(-0.99, 0.99);
+
 	import std.functional : toDelegate;
-	auto samples = samplePoints(toDelegate(&arctanh), rangeX, 200); 
+	enum numSamples = 200;
+	const samples = samplePoints(toDelegate(&arctanh), rangeX, numSamples); 
+	const referenceSamples = samplePoints(a => std.math.atanh(a), rangeX, numSamples); 
+
+	void graph(const v2[] samples, ref ScreenPainter painter, v2 halfSpace) 
+	{
+		auto getPoint(v2 s) { return screenCenter + (s * v2(1, -1) / halfSpace * dimensions / 2).point; }
+
+		auto p0 = getPoint(samples[0]);
+		foreach (s1; samples[1..$])
+		{
+			auto p1 = getPoint(s1);
+			painter.drawLine(p0, p1);
+			p0 = p1;
+		}
+	}
 
 	void draw()
 	{	
@@ -101,7 +119,6 @@ void main(string[] args)
 		painter.outlineColor = Color.black;
 		painter.fillColor = Color.black;
 
-		Point screenCenter = Point(width / 2, height / 2);
 		
 		painter.drawLine(Point(0, height / 2), Point(width, height / 2));
 		painter.drawLine(Point(width / 2, 0), Point(width / 2, height));
@@ -129,7 +146,7 @@ void main(string[] args)
 		v2 offsetScreen = v2(screenCenter.x / numberOfPipsPlus1, screenCenter.y / numberOfPipsPlus1);
 		v2 halfSpace = end - origin;
 		v2 individualOffset = halfSpace / numberOfPipsPlus1;
-
+		
 		foreach (i; -numberOfpips..numberOfpips + 1)
 		{
 			if (i == 0) continue;
@@ -153,18 +170,11 @@ void main(string[] args)
 				painter.drawText(screenEnd - Point(0, painter.textSize(str).height / 2), str);
 			}
 		}
-
-		{
-			auto getPoint(v2 s) { return screenCenter + (s / halfSpace * dimensions / 2).point; }
-			auto p0 = getPoint(samples[0] * v2(1, -1));
-
-			foreach (s1; samples[1..$])
-			{
-				auto p1 = getPoint(s1 * v2(1, -1));
-				painter.drawLine(p0, p1);
-				p0 = p1;
-			}
-		}
+		
+		graph(samples, painter, halfSpace);
+		pen.color = Color.red;
+		painter.pen = pen;
+		graph(referenceSamples, painter, halfSpace);
 	}
 
 	window.eventLoop(1000/60, { draw(); });
