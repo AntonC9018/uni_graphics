@@ -51,14 +51,13 @@ v2[] samplePoints(float delegate(float) func, v2 rangeX, float numSamples)
 		result ~= v2(x, func(x)); 
 	}
 
-	// result ~= v2(rangeX[1], func(rangeX[0]));
+	result ~= v2(rangeX[1], func(rangeX[1]));
 
 	return result;
 }
 
-auto epsilon = 0.0001f;
 
-float arctanh(float x)
+float arctanh(float x, float epsilon)
 {
 	// It blows up to infinity at the endpoints.
 	// I think it's not symmetric? 
@@ -71,6 +70,10 @@ float arctanh(float x)
 	float dx = x;
 	float y = 0;
 
+	// We bail out when the dx becomes too small to change the value significantly.
+	// Now, the thing it, this Maclaurin series converges pretty slowly, so this is wrong.
+	// Getting into more advanced equations does not seems like the point of the assignment,
+	// so I shall stop here.
 	while (abs(dx) > epsilon)
 	{
 		y += dx;
@@ -83,20 +86,45 @@ float arctanh(float x)
 	return y;
 }
 
+void writePointsComparisonCsv(string path, const v2[] samples, const v2[] referenceSamples, float epsilon)
+{
+	import std.format;
+
+	auto f = File(path, "w");
+	f.writeln("x,y,reference_y,delta,epsilon");
+	foreach (i, sample; samples)
+	{
+		f.writeln("%f,%f,%f,%f,%f".format(sample.x, sample.y, referenceSamples[i].y, abs(sample.y - referenceSamples[i].y), epsilon));
+	}
+	f.close();
+}
+
+void writePointCsv(string path, const v2[] samples)
+{
+	import std.format;
+
+	auto f = File(path, "w");
+	f.writeln("x,y");
+	foreach (sample; samples)
+	{
+		f.writeln("%f,%f".format(sample.x, sample.y));
+	}
+	f.close();
+}
 
 void main(string[] args)
 {
 	auto window = new SimpleWindow();
-	auto width() { return window.width; }
-	auto height() { return window.height; }
+	int width() { return window.width; }
+	int height() { return window.height; }
 	v2 dimensions() { return v2(width, height); }
 	Point screenCenter() { return Point(width / 2, height / 2); }
 
 	v2 rangeX = v2(-0.99, 0.99);
 
-	import std.functional : toDelegate;
-	enum numSamples = 200;
-	const samples = samplePoints(toDelegate(&arctanh), rangeX, numSamples); 
+	int numSamples = 200;
+	float epsilon = 0.0001f;
+	const samples = samplePoints(a => arctanh(a, epsilon), rangeX, numSamples); 
 	const referenceSamples = samplePoints(a => std.math.atanh(a), rangeX, numSamples); 
 
 	void graph(const v2[] samples, ref ScreenPainter painter, v2 halfSpace) 
@@ -112,13 +140,15 @@ void main(string[] args)
 		}
 	}
 
+	writePointsComparisonCsv("atanh_comparison.csv", samples, referenceSamples, epsilon);
+	writePointCsv("atanh.csv", samples);
+
 	void draw()
 	{	
 		auto painter = window.draw();
 		painter.clear();
 		painter.outlineColor = Color.black;
 		painter.fillColor = Color.black;
-
 		
 		painter.drawLine(Point(0, height / 2), Point(width, height / 2));
 		painter.drawLine(Point(width / 2, 0), Point(width / 2, height));
@@ -127,7 +157,6 @@ void main(string[] args)
 		pen.width = 1;
 		pen.color = Color.blue;
 		pen.style = Pen.Style.Solid; 
-
 		painter.pen = pen;
 
 		import std.algorithm.comparison : max, min;
@@ -136,8 +165,8 @@ void main(string[] args)
 		auto leeway = 0.1;
 
 		auto rangeY = v2(minimumY, maximumY);
-		auto origin = v2(maximumY + minimumY, rangeX[1] + rangeX[0]) / 2;
-		auto start = (v2(rangeX[0], rangeY[0]) - origin) * (1 + leeway) + origin;
+		auto origin = v2(rangeY[1] + rangeY[0], rangeX[1] + rangeX[0]) / 2;
+		// auto start = (v2(rangeX[0], rangeY[0]) - origin) * (1 + leeway) + origin;
 		auto end = (v2(rangeX[1], rangeY[1]) - origin.y) * (1 + leeway) + origin.y;
 
 		int numberOfpips = 10;

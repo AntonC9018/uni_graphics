@@ -12,7 +12,7 @@
             "program": "${workspaceRoot}/bin/${config:configurationName}.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceRoot}/bin",
             "environment": [],
             "console": "externalTerminal"
         },
