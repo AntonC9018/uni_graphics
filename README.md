@@ -15,9 +15,7 @@ Leave a star as a way to say "Thank you". Enjoy!
 
 1. `git clone https://github.com/AntonC9018/uni_cryptanalysis`
 2. Install DMD from [here](https://dlang.org/download.html). Be sure to add D binaries in path (you'll be asked on installation).
-3. `dub run` in the project root folder will start the app.
-
-To run a specific lab, do `dub run --config=labX`, where X is the number of the lab.
+3. To run a specific lab, do `dub run --config=labX`, where X is the number of the lab.
 
 ## Debugging
 
