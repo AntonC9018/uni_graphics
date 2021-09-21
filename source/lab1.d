@@ -68,20 +68,20 @@ float arctanh(float x, float epsilon)
 	float x_squared = x * x;
 	float denominator = 1;
 	float dx = x;
-	float y = 0;
+	float y = dx;
 
 	// We bail out when the dx becomes too small to change the value significantly.
 	// Now, the thing it, this Maclaurin series converges pretty slowly, so this is wrong.
-	// Getting into more advanced equations does not seems like the point of the assignment,
+	// Getting into more advanced equations does not seem like the point of the assignment,
 	// so I shall stop here.
 	while (abs(dx) > epsilon)
 	{
-		y += dx;
-
 		// x^(2k - 1) / (2k - 1)
 		x *= x_squared;
 		denominator += 2;
 		dx = x / denominator;
+
+		y += dx;
 	}
 	return y;
 }
@@ -92,7 +92,7 @@ void writePointsComparisonCsv(string path, const v2[] samples, const v2[] refere
 	f.writeln("x,y,reference_y,delta,epsilon");
 	foreach (i, sample; samples)
 	{
-		f.writefln("%f,%f,%f,%f,%f", sample.x, sample.y, referenceSamples[i].y, abs(sample.y - referenceSamples[i].y), epsilon);
+		f.writefln("%f,%f,%f,%8.8f,%f", sample.x, sample.y, referenceSamples[i].y, abs(sample.y - referenceSamples[i].y), epsilon);
 	}
 	f.close();
 }
