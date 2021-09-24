@@ -9,12 +9,18 @@
 	"license": "MIT",
 	"name": "uni_graphics",
 	"targetType": "executable",
+	"sourcePaths": ["source/arsd", "source/common"],
 	"configurations": [
 		{
 			"name": "lab1",
-			"sourcePaths": ["source/arsd", "source/common"],
 			"sourceFiles": ["source/lab1.d"],
 			"targetName": "lab1"
+		},
+		{
+			"name": "lab2",
+			"copyFiles": ["assets/income.csv"],
+			"sourceFiles": ["source/lab2.d"],
+			"targetName": "lab2"
 		}
 	]
 }
