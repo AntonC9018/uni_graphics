@@ -18,7 +18,7 @@
 		},
 		{
 			"name": "lab2",
-			"copyFiles": ["assets/income.csv"],
+			"copyFiles": ["assets/income.csv", "assets/colors.csv"],
 			"sourceFiles": ["source/lab2.d"],
 			"targetName": "lab2"
 		}

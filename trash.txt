@@ -1,0 +1,17 @@
+
+
+// private string _getMixinString(string name)
+// {
+// 	string changeName = name ~ `change_`;
+// 	return(`
+// 		static float ` ~ name ~ ` = start_;
+// 		static float ` ~ changeName ~ ` = change_;
+// 		if (` ~ name ~ ` < start_ || ` ~ name ~ ` > end_)` ~
+// 			changeName ~ ` = -` ~ changeName ~ `;` ~
+// 		name ~ ` += ` ~ changeName ~ `;`);
+// }
+	
+// mixin template Animate(string variableName, float change_, float start_, float end_)
+// {
+// 	mixin(_getMixinString(variableName));
+// }

@@ -5,7 +5,7 @@ import std.range;
 import std.algorithm;
 
 import std.math;
-import common.vector;
+import common.util;
 
 v2[] samplePoints(float delegate(float) func, v2 rangeX, float numSamples)
 {

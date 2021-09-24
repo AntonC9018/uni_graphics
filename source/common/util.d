@@ -1,4 +1,4 @@
-module common.vector;
+module common.util;
 
 import arsd.simpledisplay;
 
@@ -6,8 +6,8 @@ struct v2
 {
 	float[2] arrayof;
 
-	float x() const { return arrayof[0]; }
-	float y() const { return arrayof[1]; }
+	ref auto inout x() { return arrayof[0]; }
+	ref auto inout y() { return arrayof[1]; }
 
 	this(float x, float y)
 	{
@@ -33,5 +33,31 @@ struct v2
 	ref auto opIndex(size_t index)
 	{
 		return arrayof[index];
+	}
+}
+
+
+struct Animation
+{
+	float value;
+	float _change;
+	float _start;
+	float _end;
+
+	alias value this;
+
+	this(float start, float end, float change)
+	{
+		value = start;
+		_change = change;
+		_start = start;
+		_end = end;
+	}
+
+	void update()
+	{
+		if (value < _start || value > _end)
+			_change = -_change;
+		value += _change;
 	}
 }
