@@ -49,6 +49,6 @@ void main(string[] args)
 
 		enum leeway = 0.1;
 		int width1 = cast(int) (min(width, height) * (1 - leeway));
-		painter.drawArc(screenCenter - Point(width1 / 2, width1 / 2), width1, width1, 0, 90 * 64);
+		painter.drawArc(screenCenter - Point(width1 / 2, width1 / 2), width1, width1, -0, 90 * 64);
 	});
 }

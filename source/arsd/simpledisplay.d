@@ -10205,12 +10205,10 @@ version(Windows) {
 				float startAngle = cast(float) start / 64.0 / 180.0 * 3.14159265358979323;
 				float endAngle = cast(float) finish / 64.0 / 180.0 * 3.14159265358979323;
 
-				auto c1 = cast(int)(cos(startAngle) * width / 2 + x1 + width / 2);
-				auto c2 = cast(int)(-sin(startAngle) * height / 2 + y1 + height / 2);
-				auto c3 = cast(int)(cos(endAngle) * width / 2 + x1 + width / 2);
-				auto c4 = cast(int)(-sin(endAngle) * height / 2 + y1 + height / 2);
-				import std.stdio; writeln(c1, " ", c2, " ", c3, " ", c4);
-
+				auto c1 = cast(int) round(cos(startAngle) * width / 2 + x1 + width / 2);
+				auto c2 = cast(int) round(-sin(startAngle) * height / 2 + y1 + height / 2);
+				auto c3 = cast(int) round(cos(endAngle) * width / 2 + x1 + width / 2);
+				auto c4 = cast(int) round(-sin(endAngle) * height / 2 + y1 + height / 2);
 
 				if(_activePen.color.a)
 					Arc(hdc, x1, y1, x1 + width + 1, y1 + height + 1, c1, c2, c3, c4);
