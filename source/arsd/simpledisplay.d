@@ -1504,11 +1504,42 @@ float[2] getDpi() {
 	return dpi;
 }
 
-TrueColorImage trueColorImageFromNativeHandle(NativeWindowHandle handle, int width, int height) {
+/++
+	Implementation used by [SimpleWindow.takeScreenshot].
+
+	Params:
+		handle = the native window handle. If `NativeWindowHandle.init`, it will attempt to get the whole screen.
+		width = the width of the image you wish to capture. If 0, it will attempt to capture the full width of the target.
+		height = the height of the image you wish to capture. If 0, it will attempt to capture the full height of the target.
+		x = the x-offset of the image to capture, from the left.
+		y = the y-offset of the image to capture, from the top.
+
+	History:
+		Added on March 14, 2021
+
+		Documented public on September 23, 2021 with full support for null params (dub 10.3)
+		
++/
+TrueColorImage trueColorImageFromNativeHandle(NativeWindowHandle handle, int width = 0, int height = 0, int x = 0, int y = 0) {
 	TrueColorImage got;
 	version(X11) {
 		auto display = XDisplayConnection.get;
-		auto image = XGetImage(display, handle, 0, 0, width, height, (cast(c_ulong) ~0) /*AllPlanes*/, ImageFormat.ZPixmap);
+		if(handle == 0)
+			handle = RootWindow(display, DefaultScreen(display));
+
+		if(width == 0 || height == 0) {
+			Window root;
+			int xpos, ypos;
+			uint widthret, heightret, borderret, depthret;
+			XGetGeometry(display, handle, &root, &xpos, &ypos, &widthret, &heightret, &borderret, &depthret);
+
+			if(width == 0)
+				width = widthret;
+			if(height == 0)
+				height = heightret;
+		}
+
+		auto image = XGetImage(display, handle, x, y, width, height, (cast(c_ulong) ~0) /*AllPlanes*/, ImageFormat.ZPixmap);
 
 		// https://github.com/adamdruppe/arsd/issues/98
 
@@ -1517,14 +1548,23 @@ TrueColorImage trueColorImageFromNativeHandle(NativeWindowHandle handle, int wid
 
 		XDestroyImage(image);
 	} else version(Windows) {
-		// I just need to BitBlt that shit... BUT WAIT IT IS ALREADY IN A DIB!!!!!!!
-
 		auto hdc = GetDC(handle);
 		scope(exit) ReleaseDC(handle, hdc);
+
+		if(width == 0 || height == 0) {
+			BITMAP bmHeader;
+			auto bm  = GetCurrentObject(hdc, OBJ_BITMAP);
+			GetObject(bm, BITMAP.sizeof, &bmHeader);
+			if(width == 0)
+				width = bmHeader.bmWidth;
+			if(height == 0)
+				height = bmHeader.bmHeight;
+		}
+
 		auto i = new Image(width, height);
 		HDC hdcMem = CreateCompatibleDC(hdc);
 		HBITMAP hbmOld = SelectObject(hdcMem, i.handle);
-		BitBlt(hdcMem, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+		BitBlt(hdcMem, x, y, width, height, hdc, 0, 0, SRCCOPY);
 		SelectObject(hdcMem, hbmOld);
 		DeleteDC(hdcMem);
 
@@ -2292,6 +2332,9 @@ class SimpleWindow : CapableOfHandlingNativeEvent, CapableOfBeingDrawnUpon {
 			this(SimpleWindow w) { this.w = w; }
 		}
 		private RedrawOpenGlSceneEvent redrawOpenGlSceneEvent;
+		/++
+			Queues an opengl redraw as soon as the other pending events are cleared.
+		+/
 		void redrawOpenGlSceneSoon() {
 			if(!redrawOpenGlSceneSoonSet) {
 				redrawOpenGlSceneEvent = new RedrawOpenGlSceneEvent(this);
@@ -2466,6 +2509,7 @@ class SimpleWindow : CapableOfHandlingNativeEvent, CapableOfBeingDrawnUpon {
 	/// Draws an image on the window. This is meant to provide quick look
 	/// of a static image generated elsewhere.
 	@property void image(Image i) {
+	/+
 		version(Windows) {
 			BITMAP bm;
 			HDC hdc = GetDC(hwnd);
@@ -2499,6 +2543,9 @@ class SimpleWindow : CapableOfHandlingNativeEvent, CapableOfBeingDrawnUpon {
 			draw().drawImage(Point(0, 0), i);
 			setNeedsDisplay(view, true);
 		} else static assert(0);
+	+/
+		auto painter = this.draw;
+		painter.drawImage(Point(0, 0), i);
 	}
 
 	/++
@@ -4587,7 +4634,7 @@ class NotificationAreaIcon : CapableOfHandlingNativeEvent {
 }
 
 version(X11)
-/// Call `XFreePixmap()` on the return value.
+/// Call `XFreePixmap` on the return value.
 Pixmap transparencyMaskFromMemoryImage(MemoryImage i, Window window) {
 	char[] data = new char[](i.width * i.height / 8 + 2);
 	data[] = 0;
@@ -6045,7 +6092,7 @@ version(Windows) {
 		return id;
 	}
 
-	/// Platform-specific for Windows. Unregisters a key. The id is the value returned by `registerHotKey()`.
+	/// Platform-specific for Windows. Unregisters a key. The id is the value returned by [registerHotKey].
 	void unregisterHotKey(SimpleWindow window, int id) {
 		if(!UnregisterHotKey(window.impl.hwnd, id))
 			throw new Exception("UnregisterHotKey");
@@ -6309,9 +6356,9 @@ version(without_opengl) {
 			}
 
 			version(OSX)
-			mixin DynamicLoad!(GLX, "GL", 0, true) glx;
+			mixin DynamicLoad!(GLX, "GL", 0, openGlLibrariesSuccessfullyLoaded) glx;
 			else
-			mixin DynamicLoad!(GLX, "GLX", 0, true) glx;
+			mixin DynamicLoad!(GLX, "GLX", 0, openGlLibrariesSuccessfullyLoaded) glx;
 			shared static this() {
 				glx.loadDynamicLibrary();
 			}
@@ -7514,6 +7561,71 @@ class OperatingSystemFont {
 		}
 	}
 
+	/++
+		Returns the raw content of the ttf file, if possible. This allows you to use OperatingSystemFont
+		to look up fonts that you then pass to things like [arsd.game.OpenGlLimitedFont] or [arsd.nanovega].
+
+		Returns null if impossible. It is impossible if the loaded font is not a local TTF file or if the
+		underlying system doesn't support returning the raw bytes.
+
+		History:
+			Added September 10, 2021 (dub v10.3)
+	+/
+	ubyte[] getTtfBytes() {
+		if(isNull)
+			return null;
+
+		version(Windows) {
+			auto dc = GetDC(null);
+			auto orig = SelectObject(dc, font);
+
+			scope(exit) {
+				SelectObject(dc, orig);
+				ReleaseDC(null, dc);
+			}
+
+			auto res = GetFontData(dc, 0 /* whole file */, 0 /* offset */, null, 0);
+			if(res == GDI_ERROR)
+				return null;
+
+			ubyte[] buffer = new ubyte[](res);
+			res = GetFontData(dc, 0 /* whole file */, 0 /* offset */, buffer.ptr, cast(DWORD) buffer.length);
+			if(res == GDI_ERROR)
+				return null; // wtf really tbh
+
+			return buffer;
+		} else version(with_xft) {
+			if(isXft && xftFont) {
+				if(!FontConfigLibrary.attempted)
+					FontConfigLibrary.loadDynamicLibrary();
+				if(!FontConfigLibrary.loadSuccessful)
+					return null;
+
+				char* file;
+				if (FcPatternGetString(xftFont.pattern, "file", 0, &file) == 0 /*FcResultMatch*/) {
+					if (file !is null && file[0]) {
+						import core.stdc.stdio;
+						auto fp = fopen(file, "rb");
+						if(fp is null)
+							return null;
+						scope(exit)
+							fclose(fp);
+						fseek(fp, 0, SEEK_END);
+						ubyte[] buffer = new ubyte[](ftell(fp));
+						fseek(fp, 0, SEEK_SET);
+
+						auto got = fread(buffer.ptr, 1, buffer.length, fp);
+						if(got != buffer.length)
+							return null;
+
+						return buffer;
+					}
+				}
+			}
+			return null;
+		}
+	}
+
 	// see also: XftLockFace(font) which gives a FT_Face. from /usr/include/X11/Xft/Xft.h line 352
 
 	private string weightToString(FontWeight weight) {
@@ -7982,7 +8094,8 @@ struct ScreenPainter {
 		this.window = window;
 		if(window.closed)
 			return; // null painter is now allowed so no need to throw anymore, this likely happens at the end of a program anyway
-		currentClipRectangle = arsd.color.Rectangle(0, 0, window.width, window.height);
+		//currentClipRectangle = arsd.color.Rectangle(0, 0, window.width, window.height);
+		currentClipRectangle = arsd.color.Rectangle(short.min, short.min, short.max, short.max);
 		if(window.activeScreenPainter !is null) {
 			impl = window.activeScreenPainter;
 			if(impl.referenceCount == 0) {
@@ -8045,19 +8158,15 @@ struct ScreenPainter {
 	@property int originX() { return _originX; }
 	@property int originY() { return _originY; }
 	@property int originX(int a) {
-		//currentClipRectangle.left += a - _originX;
-		//currentClipRectangle.right += a - _originX;
 		_originX = a;
 		return _originX;
 	}
 	@property int originY(int a) {
-		//currentClipRectangle.top += a - _originY;
-		//currentClipRectangle.bottom += a - _originY;
 		_originY = a;
 		return _originY;
 	}
 	arsd.color.Rectangle currentClipRectangle; // set BEFORE doing any transformations
-	void transform(ref Point p) {
+	private void transform(ref Point p) {
 		if(impl is null) return;
 		p.x += _originX;
 		p.y += _originY;
@@ -8794,7 +8903,7 @@ interface CapableOfBeingDrawnUpon {
 	TrueColorImage takeScreenshot();
 }
 
-/// Flushes any pending gui buffers. Necessary if you are using with_eventloop with X - flush after you create your windows but before you call `loop()`.
+/// Flushes any pending gui buffers. Necessary if you are using with_eventloop with X - flush after you create your windows but before you call [arsd.eventloop.loop].
 void flushGui() {
 	version(X11) {
 		auto dpy = XDisplayConnection.get();
@@ -10093,14 +10202,20 @@ version(Windows) {
 				drawEllipse(x1, y1, x1 + width, y1 + height);
 			else {
 				import core.stdc.math;
-				float startAngle = start * 64 * 180 / 3.14159265;
-				float endAngle = finish * 64 * 180 / 3.14159265;
-				Arc(hdc, x1, y1, x1 + width, y1 + height,
-					cast(int)(cos(startAngle) * width / 2 + x1),
-					cast(int)(sin(startAngle) * height / 2 + y1),
-					cast(int)(cos(endAngle) * width / 2 + x1),
-					cast(int)(sin(endAngle) * height / 2 + y1),
-				);
+				float startAngle = cast(float) start / 64.0 / 180.0 * 3.14159265358979323;
+				float endAngle = cast(float) finish / 64.0 / 180.0 * 3.14159265358979323;
+
+				auto c1 = cast(int)(cos(startAngle) * width / 2 + x1 + width / 2);
+				auto c2 = cast(int)(-sin(startAngle) * height / 2 + y1 + height / 2);
+				auto c3 = cast(int)(cos(endAngle) * width / 2 + x1 + width / 2);
+				auto c4 = cast(int)(-sin(endAngle) * height / 2 + y1 + height / 2);
+				import std.stdio; writeln(c1, " ", c2, " ", c3, " ", c4);
+
+
+				if(_activePen.color.a)
+					Arc(hdc, x1, y1, x1 + width + 1, y1 + height + 1, c1, c2, c3, c4);
+				if(_fillColor.a)
+					Pie(hdc, x1, y1, x1 + width + 1, y1 + height + 1, c1, c2, c3, c4);
 			}
 		}
 
@@ -11471,8 +11586,10 @@ version(X11) {
 				XFillArc(display, d, gc, x1, y1, width, height, start, finish);
 				swapColors();
 			}
-			if(foregroundIsNotTransparent)
+			if(foregroundIsNotTransparent) {
 				XDrawArc(display, d, gc, x1, y1, width, height, start, finish);
+				// Windows draws the straight lines on the edges too so FIXME sort of
+			}
 		}
 
 		void drawPolygon(Point[] vertexes) {
@@ -11750,7 +11867,8 @@ extern(C) @nogc:
 				XAnimCursor	*cursors);
 }
 
-mixin DynamicLoad!(XRender, "Xrender", 1, false, true) XRenderLibrary;
+__gshared bool XRenderLibrarySuccessfullyLoaded = true;
+mixin DynamicLoad!(XRender, "Xrender", 1, XRenderLibrarySuccessfullyLoaded) XRenderLibrary;
 
 
 
@@ -12250,8 +12368,8 @@ mixin DynamicLoad!(XRender, "Xrender", 1, false, true) XRenderLibrary;
 		char* FcNameUnparse(const FcPattern *);
 	}
 
-	mixin DynamicLoad!(Xft, "Xft", 2) XftLibrary;
-	mixin DynamicLoad!(FontConfig, "fontconfig", 1) FontConfigLibrary;
+	mixin DynamicLoad!(Xft, "Xft", 2, librariesSuccessfullyLoaded) XftLibrary;
+	mixin DynamicLoad!(FontConfig, "fontconfig", 1, librariesSuccessfullyLoaded) FontConfigLibrary;
 
 
 	/* Xft } */
@@ -14417,8 +14535,8 @@ extern(C) nothrow @nogc {
 	//int XpmCreatePixmapFromData(Display*, Drawable, in char**, Pixmap*, Pixmap*, void*); // FIXME: void* should be XpmAttributes
 
 
-mixin DynamicLoad!(XLib, "X11", 6) xlib;
-mixin DynamicLoad!(Xext, "Xext", 6) xext;
+mixin DynamicLoad!(XLib, "X11", 6, librariesSuccessfullyLoaded) xlib;
+mixin DynamicLoad!(Xext, "Xext", 6, librariesSuccessfullyLoaded) xext;
 shared static this() {
 	xlib.loadDynamicLibrary();
 	xext.loadDynamicLibrary();
@@ -16905,20 +17023,30 @@ extern(System) nothrow @nogc {
 	}
 }
 
+/++
+	History:
+		Added September 10, 2021. Previously it would have listed openGlLibrariesSuccessfullyLoaded as false if it couldn't find GLU but really opengl3 works fine without it so I didn't want to keep it required anymore.
++/
+__gshared bool gluSuccessfullyLoaded = true;
+
 version(without_opengl) {} else {
 static if(!SdpyIsUsingIVGLBinds) {
 	version(Windows) {
-		mixin DynamicLoad!(GL, "opengl32", 1, true) gl;
-		mixin DynamicLoad!(GLU, "glu32", 1, true) glu;
+		mixin DynamicLoad!(GL, "opengl32", 1, openGlLibrariesSuccessfullyLoaded) gl;
+		mixin DynamicLoad!(GLU, "glu32", 1, gluSuccessfullyLoaded) glu;
 	} else {
-		mixin DynamicLoad!(GL, "GL", 1, true) gl;
-		mixin DynamicLoad!(GLU, "GLU", 3, true) glu;
+		mixin DynamicLoad!(GL, "GL", 1, openGlLibrariesSuccessfullyLoaded) gl;
+		mixin DynamicLoad!(GLU, "GLU", 3, gluSuccessfullyLoaded) glu;
 	}
 	mixin DynamicLoadSupplementalOpenGL!(GL3) gl3;
 
 
 	shared static this() {
 		gl.loadDynamicLibrary();
+
+		// FIXME: this is NOT actually required and should NOT fail if it is not loaded
+		// unless those functions are actually used
+		// go to mark b openGlLibrariesSuccessfullyLoaded = false;
 		glu.loadDynamicLibrary();
 	}
 }
@@ -19966,7 +20094,7 @@ private const(char)[] staticForeachReplacement(Iface)() pure {
 	return code[0 .. pos];
 }
 
-private mixin template DynamicLoad(Iface, string library, int majorVersion, bool openGLRelated = false, bool optional = false) {
+private mixin template DynamicLoad(Iface, string library, int majorVersion, alias success) {
 	mixin(staticForeachReplacement!Iface);
 
         private void* libHandle;
@@ -20014,11 +20142,8 @@ private mixin template DynamicLoad(Iface, string library, int majorVersion, bool
 				return GetProcAddress(l, name);
 			}
                 }
-                if(libHandle is null && !optional) {
-			if(openGLRelated)
-				openGlLibrariesSuccessfullyLoaded = false;
-			else
-				librariesSuccessfullyLoaded = false;
+                if(libHandle is null) {
+			success = false;
                         //throw new Exception("load failure of library " ~ library);
 		}
                 foreach(name; __traits(derivedMembers, Iface)) {
