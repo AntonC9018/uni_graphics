@@ -57,7 +57,8 @@ void main(string[] args)
 		}
 	}
 
-	window.eventLoop(1000 / 60, {
+	window.eventLoop(1000 / 60, 
+	{
 		auto painter = window.draw();
 		const backgroundColor = Color.white;
 		painter.clear(backgroundColor);
