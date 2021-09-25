@@ -161,7 +161,7 @@ void main(string[] args)
 			const displacementProjectedLength = displacementFactor * offsetVariation;
 			const displacementVector = toLeftUpDirection * displacementProjectedLength;
 			// Next account for the actual top left corner.
-			// We need to rescale the initial top left corner by the constant.
+			// We need to rescale the initial top left corner relative to the center by the constant.
 			const coveringCircleDiameter = cast(float) diameter * howMuchOfThePieToCover;
 			const actualTopLeftCornerPosition = diagramCenterPosition - 
 				Point(cast(int) coveringCircleDiameter / 2, cast(int) coveringCircleDiameter / 2);
