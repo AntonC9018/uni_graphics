@@ -26,14 +26,14 @@ void main(string[] args)
 		return dataCsv.header.countUntil!(col => col == name);
 	}
 
-	size_t yearColumnIndex = findColumn("2020");
+	const yearColumnIndex = findColumn("2020");
 	assert(yearColumnIndex < dataCsv.header.length);
-	size_t dataIndex = yearColumnIndex;
-	size_t labelIndex = 0;
+	const dataIndex = yearColumnIndex;
+	const labelIndex = 0;
 
-	size_t startIndex = 50;
-	size_t dataCount = 25;
-	size_t endIndex = startIndex + dataCount;
+	const size_t startIndex = 50;
+	const size_t dataCount = 25;
+	const size_t endIndex = startIndex + dataCount;
 
 	float[] values = new float[](dataCount);
 	float sum = 0;
@@ -59,7 +59,8 @@ void main(string[] args)
 
 	window.eventLoop(1000 / 60, {
 		auto painter = window.draw();
-		painter.clear(Color.white);
+		const backgroundColor = Color.white;
+		painter.clear(backgroundColor);
 		painter.fillColor = Color.purple;
 		// painter.outlineColor = Color.black;
 
@@ -72,7 +73,8 @@ void main(string[] args)
 		int pieSpaceSize = min(width - abs(diagramOffset.x), height - abs(diagramOffset.y));
 		int diameter = cast(int) (pieSpaceSize * (1 - leeway - displacement));
 		float displacementFactor = displacement * pieSpaceSize / 2;
-		Point diagramUpperLeft = screenCenter - Point(diameter / 2, diameter / 2) + diagramOffset / 2;
+		Point diagramCenterPosition = screenCenter + diagramOffset / 2;
+		Point diagramUpperLeft = diagramCenterPosition - Point(diameter / 2, diameter / 2);
 
 		enum size_t colorIndexStart = 55;
 		// Change this to get a more spread-out palette.
@@ -103,7 +105,7 @@ void main(string[] args)
 			textCurrentPosition.y += textLineHeight;
 			textCurrentBottomRightPosition.y += textLineHeight;
 		}
-		doText(dataCsv.header[labelIndex]);
+		doText(dataCsv.header[labelIndex] ~ ": " ~ dataCsv.header[dataIndex]);
 
 		const totalAngle = 64 * 360;
 		float anglePerUnit = cast(float) totalAngle / sum;
@@ -144,6 +146,32 @@ void main(string[] args)
 			const label = dataCsv.data[labelIndex][index + startIndex];
 			const valueText = dataCsv.data[dataIndex][index + startIndex];
 			doText(label ~ ": " ~ valueText);
+		}
+
+		// Draw a pie diagram vs cover the center of it to get just the outer lines.
+		// I think there is no way to apply a mask, so I'm doing that instead.
+		enum coverPie = true;
+		if (coverPie)
+		{
+			enum howMuchOfThePieToCover = 0.8f;
+			// Does not need to be normalized, because the variation 
+			// actually shows the x displacement / diameter growth.
+			const toLeftUpDirection = v2(-1, -1);
+			// This accounts for the animation.
+			const displacementProjectedLength = displacementFactor * offsetVariation;
+			const displacementVector = toLeftUpDirection * displacementProjectedLength;
+			// Next account for the actual top left corner.
+			// We need to rescale the initial top left corner by the constant.
+			const coveringCircleDiameter = cast(float) diameter * howMuchOfThePieToCover;
+			const actualTopLeftCornerPosition = diagramCenterPosition - 
+				Point(cast(int) coveringCircleDiameter / 2, cast(int) coveringCircleDiameter / 2);
+			// And this diameter is affected by the animation.
+			const coveringCircleAnimatedDiameter = coveringCircleDiameter + displacementProjectedLength * 2;
+
+			painter.fillColor = backgroundColor;
+			pen.color = Color.transparent;
+			painter.pen = pen;
+			painter.drawCircle(actualTopLeftCornerPosition + displacementVector.point, cast(int) coveringCircleAnimatedDiameter);
 		}
 	});
 }
