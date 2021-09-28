@@ -90,9 +90,9 @@ void main(string[] args)
 	const samples = samplePoints(a => arctanh(a, epsilon), rangeX, numSamples); 
 	const referenceSamples = samplePoints(a => std.math.atanh(a), rangeX, numSamples); 
 
-	void graph(const v2[] samples, ref ScreenPainter painter, v2 halfSpace) 
+	void graph(const v2[] samples, ref ScreenPainter painter, v2 originInFuncCoords, v2 halfSpace) 
 	{
-		auto getPoint(v2 s) { return screenCenter + (s * v2(1, -1) / halfSpace * dimensions / 2).point; }
+		auto getPoint(v2 s) { return screenCenter + ((s - originInFuncCoords) * v2(1, -1) / halfSpace * dimensions / 2).point; }
 
 		auto p0 = getPoint(samples[0]);
 		foreach (s1; samples[1..$])
@@ -126,9 +126,10 @@ void main(string[] args)
 		auto leeway = 0.1;
 
 		auto rangeY = v2(minimumY, maximumY);
-		auto origin = v2(rangeY[1] + rangeY[0], rangeX[1] + rangeX[0]) / 2;
+		auto origin = v2(rangeX[1] + rangeX[0], rangeY[1] + rangeY[0]) / 2;
 		// auto start = (v2(rangeX[0], rangeY[0]) - origin) * (1 + leeway) + origin;
-		auto end = (v2(rangeX[1], rangeY[1]) - origin.y) * (1 + leeway) + origin.y;
+		// top tight corner coordinate in function coordinates
+		auto end = (v2(rangeX[1], rangeY[1]) - origin) * (1 + leeway) + origin;
 
 		int numberOfpips = 10;
 		int pipHeight = 10;
@@ -161,10 +162,10 @@ void main(string[] args)
 			}
 		}
 		
-		graph(samples, painter, halfSpace);
+		graph(samples, painter, origin, halfSpace);
 		pen.color = Color.red;
 		painter.pen = pen;
-		graph(referenceSamples, painter, halfSpace);
+		graph(referenceSamples, painter, origin, halfSpace);
 	}
 
 	window.eventLoop(1000/60, { draw(); });
