@@ -141,8 +141,8 @@ void main(string[] args)
 		// How much of the pie the rows are going to take.
 		enum rowSpacePercentage = 0.6;
 		// Width of row including gaps
-		const spacePerRow = rowSpacePercentage / cast(float) (numRows - 1);
-		const diameterShrinkPerRow = -spacePerRow * cast(float) diameter / 2;
+		const spacePerRow = rowSpacePercentage / cast(float) (numRows);
+		const diameterShrinkPerRow = -spacePerRow * cast(float) diameter;
 
 		// How much of the rows length the gaps are going to override.
 		enum gapSizeOfRemainingSpace = 0.5;
