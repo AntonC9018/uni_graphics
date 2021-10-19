@@ -21,6 +21,11 @@
 			"copyFiles": ["assets/income.csv", "assets/colors.csv"],
 			"sourceFiles": ["source/lab2.d"],
 			"targetName": "lab2"
+		},
+		{
+			"name": "bezier_editor",
+			"sourceFiles": ["source/bezier_editor.d"],
+			"targetName": "bezier_editor"
 		}
 	]
 }

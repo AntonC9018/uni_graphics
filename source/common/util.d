@@ -30,9 +30,20 @@ struct v2
 		mixin(`return v2(x`, op, `rhs,y`, op, `rhs);`);
 	}
 
+	v2 opOpAssign(string op, T)(T value)
+	{
+		this.arrayof = opBinary!op(value).arrayof;
+		return this;
+	}
+
 	ref auto opIndex(size_t index)
 	{
 		return arrayof[index];
+	}
+
+	float sqMagnitude()
+	{
+		return x^^2 + y^^2; 
 	}
 }
 
