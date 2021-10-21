@@ -26,6 +26,11 @@
 			"name": "bezier_editor",
 			"sourceFiles": ["source/bezier_editor.d"],
 			"targetName": "bezier_editor"
+		},
+		{
+			"name": "test1",
+			"sourceFiles": ["source/test1.d"],
+			"targetName": "test1"
 		}
 	]
 }
