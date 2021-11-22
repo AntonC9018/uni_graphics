@@ -304,6 +304,7 @@ void main()
                                     const p = diag * amount + selectedCheckerPosition;
                                     if (idAt(p) != -1)
                                     {
+                                        checkers[idAt(p)] |= eliminated;
                                         idAt(p) = -1;
                                         took = true;
                                     }
