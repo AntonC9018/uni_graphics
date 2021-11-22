@@ -14,3 +14,4 @@ uni_graphics-test-*
 *.obj
 *.lst
 bin
+.vs
