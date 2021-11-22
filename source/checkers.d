@@ -16,33 +16,34 @@ void main()
 	auto window = new SimpleWindow();
     auto cellWidth() { return min(window.width, window.height) / 8; }
     
+    // Could store the checkers directly in the board, but whatever.
     enum eliminated = 1;
-    enum colored = 2;
+    enum colored = 2; // This info is already stored in the id, but whatever.
     enum queen = 4;
 
     int[4 * 3 * 2] checkers = 0;
     foreach (i; 0 .. 4 * 3)
         checkers[i] |= colored;
 
-    foreach (i; 0 .. 4 * 2)
-    {
-        checkers[i] |= eliminated;
-        checkers[i + 4 * 3] |= eliminated;
-    }
-
-    checkers[4 * 2] |= queen;
-    // checkers[4 * 5] |= queen;
-
-
     int[8 * 8] board = -1;
     foreach (i; 0 .. 4 * 3)
     {
         int parity = (i / 4) & 1;
-        if (!(checkers[i] & eliminated))
-            board[i * 2 + parity] = i;
-        if (!(checkers[4 * 6 - i - 1] & eliminated))
-            board[8 * 8 - i * 2 - 1 - parity] = 4 * 6 - i - 1;
+        board[i * 2 + parity] = i;
+        board[8 * 8 - i * 2 - 1 - parity] = 4 * 6 - i - 1;
     }
+
+    ref int idAt(Point pos)
+    {
+        return board[pos.x + pos.y * 8];
+    }
+
+    // Tested the no-go-backwards thing.
+    // idAt(Point(1, 1)) = 0;
+    // idAt(Point(6, 6)) = 1;
+    // idAt(Point(4, 4)) = 4 * 3;
+    // checkers[4 * 3] |= queen; 
+
     int selectedCheckerId = -1;
     Point selectedCheckerPosition;
     int ignoredDirectionIndex = -1;
@@ -50,14 +51,9 @@ void main()
 
     bool isGameRunning()
     {
-        auto alive = checkers[].filter!(c => (c & eliminated) == 0);
-        return alive.any!(c => (c & colored) > 0)
-            && alive.any!(c => (c & colored) == 0);
-    }
-
-    ref int idAt(Point pos)
-    {
-        return board[pos.x + pos.y * 8];
+        alias alive = a => !(a & eliminated);
+        return checkers[0 .. 4 * 3].any!alive
+            && checkers[4 * 3 .. $].any!alive;
     }
 
     // We use the same bit to check for black/white and up/down
@@ -78,22 +74,6 @@ void main()
         bool valid = false;
     }
 
-    Move a = Move(0);
-    writeln(a.swappedDirectionIndex);
-    assert(a.swappedDirectionIndex == 2);
-
-    a = Move(1);
-    writeln(a.swappedDirectionIndex);
-    assert(a.swappedDirectionIndex == 3);
-    
-    a = Move(2);
-    writeln(a.swappedDirectionIndex);
-    assert(a.swappedDirectionIndex == 0);
-    
-    a = Move(3);
-    writeln(a.swappedDirectionIndex);
-    assert(a.swappedDirectionIndex == 1);
-
     bool checkInBounds(int x, int y)
     {
         return (x >= 0 && x < 8 && y < 8 && y >= 0);
@@ -104,7 +84,7 @@ void main()
         return ((checker & colored) != 0) == (playerTurn == 1);
     }
 
-    auto getCheckerMovesFromPosition(Point position, int checker, int ignoredDirectionIndex = -1)
+    auto getCheckerMovesFromPosition(Point position, int checker, int ignoredDirectionIndex)
     {
         const isQueen = (checker & queen) != 0;
 
@@ -127,10 +107,7 @@ void main()
             if (!checkInBounds(offsetPos.tupleof))
                 return result;
 
-            // Colored is the second bit. 
-            // The second two directions have it set.
-            if (!isQueen && ((index & up) != (checker & colored)))
-                return result;
+            bool validNotTaking = isQueen || ((index & up) == (checker & colored));
 
             // 1. Skip empty. Repeat if queen.
             // 2. Check if non-empty is ally. Done if yes.
@@ -138,7 +115,7 @@ void main()
             // 4. Repeat from start if queen.
             if (!isQueen && idAt(offsetPos) == -1)
             {
-                result.valid = true;
+                result.valid = validNotTaking;
                 return result;
             }
             
@@ -200,7 +177,7 @@ void main()
                 continue;
             const checker = checkers[id];
             if (belongsToCurrentPlayer(checker)
-                && getCheckerMovesFromPosition(p, checker).any!(p => p.take))
+                && getCheckerMovesFromPosition(p, checker, -1).any!(p => p.take))
             {
                 return true;
             }
@@ -215,6 +192,11 @@ void main()
 		painter.outlineColor = Color.black;
 		painter.fillColor = Color.black;
 
+        if (!isGameRunning)
+        {
+            painter.drawText(Point(0, 0), "Game over");
+            return;
+        }
 
         void drawCell(int row, int col)
         {
@@ -293,7 +275,6 @@ void main()
                 if (ev.button == MouseButton.left)
                 {
                     const coords = Point(ev.x / cellWidth, ev.y / cellWidth);
-                    writeln(coords);
                     if (coords.x > 8 && coords.y > 8)
                         break;
 
@@ -343,7 +324,7 @@ void main()
                                 checkers[selectedCheckerId] |= queen;
                             }
                             
-                            if (!took || !getCheckerMovesFromPosition(selectedCheckerPosition, checkers[selectedCheckerId])
+                            if (!took || !getCheckerMovesFromPosition(selectedCheckerPosition, checkers[selectedCheckerId], move.swappedDirectionIndex)
                                 .any!(m => m.take))
                             {
                                 selectedCheckerId = -1;
