@@ -129,7 +129,7 @@ void main()
                         break;
                         
                     offsetPos = offsetPos + diag;
-                    result.valid = true;
+                    result.valid = result.valid || validNotTaking;
                     
                     if (!checkInBounds(offsetPos.tupleof))
                         return result;
