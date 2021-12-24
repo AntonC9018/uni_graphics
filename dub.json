@@ -36,6 +36,16 @@
 			"name": "checkers",
 			"sourceFiles": ["source/checkers.d"],
 			"targetName": "checkers"
+		},
+		{
+			"name": "test2",
+			"sourceFiles": ["source/test2.d"],
+			"targetName": "test2"
+		},
+		{
+			"name": "examen1",
+			"sourceFiles": ["source/examen1.d"],
+			"targetName": "examen1"
 		}
 	]
 }

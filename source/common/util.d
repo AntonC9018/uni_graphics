@@ -36,7 +36,7 @@ struct v2
 		return this;
 	}
 
-	ref auto opIndex(size_t index)
+	ref auto opIndex(size_t index) inout
 	{
 		return arrayof[index];
 	}
